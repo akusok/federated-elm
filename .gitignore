@@ -160,4 +160,4 @@ cython_debug/
 .idea/
 
 # Jupyter py:perent pairing - only keep the .py file
-.ipynb
+*.ipynb
