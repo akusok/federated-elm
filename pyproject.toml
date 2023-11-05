@@ -11,6 +11,8 @@ scikit-learn = "^1.3.2"
 pandas = "^2.1.2"
 jupyterlab = "^4.0.8"
 jupytext = "^1.15.2"
+pygwalker = "^0.3.10"
+radon = "^6.0.1"
 
 
 [build-system]

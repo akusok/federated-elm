@@ -17,6 +17,15 @@
 from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
 import pandas as pd
+import pygwalker as pig
+
+# %%
+import numpy as unnecessary_import
+
+# %%
+# check this code complexity
+# !radon mi client.py
+# !radon cc client.py -a
 
 # %%
 data = fetch_california_housing()
@@ -28,6 +37,12 @@ data_records = {
     2: {"n_train": 1000, "X": X[X.Longitude > -118], "Y": Y[X.Longitude > -118]},
     3: {"n_train": 10_000, "X": X[(X.Longitude <= -118) & (X.Latitude <= 40)], "Y": Y[(X.Longitude <= -118) & (X.Latitude <= 40)]},
 }
+
+# %%
+X.shape
+
+# %%
+pig.walk(X.iloc[::4])
 
 
 # %%
@@ -46,4 +61,4 @@ class client:
     def find_p(self):
         print(self.__p)
 
-# %%
+# %% editable=true slideshow={"slide_type": ""}
