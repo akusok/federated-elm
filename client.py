@@ -155,7 +155,7 @@ class client:
 scaler = RobustScaler().fit(X)
 
 # %% [markdown]
-# ## Find independent performance in 100-batches
+# ## Get clients
 
 # %%
 # create ELM
@@ -173,6 +173,9 @@ c1.init_elm(L, W, bias)
 c2.init_elm(L, W, bias)
 c3.init_elm(L, W, bias)
 
+
+# %% [markdown]
+# ## Find independent performance in 100-batches
 
 # %%
 def get_optimal_performance(client, batch_size=100):
@@ -217,22 +220,6 @@ plt.show()
 
 # %% [markdown]
 # ## Extend single client performance with more data
-
-# %%
-# # create ELM
-
-# n = X.shape[1]  # 8 inputs
-# L = 50
-# W = np.random.randn(n, L)
-# bias = np.random.randn(1, L)
-
-# c1 = client(1, scaler)
-# c2 = client(2, scaler)
-# c3 = client(3, scaler)
-
-# c1.init_elm(L, W, bias)
-# c2.init_elm(L, W, bias)
-# c3.init_elm(L, W, bias)
 
 # %%
 def get_optimal_performance_extended(client, collab_client, batch_size=100):
