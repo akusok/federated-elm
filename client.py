@@ -230,7 +230,7 @@ plt.xscale("log")
 plt.show()
 
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ## Extend single client performance with more data
 
 # %%
@@ -290,7 +290,7 @@ plt.show()
 from sklearn.ensemble import RandomForestRegressor
 
 # %%
-model = RandomForestRegressor(n_jobs=8)
+model = RandomForestRegressor(n_jobs=4)
 
 
 # %%
@@ -315,6 +315,42 @@ def raw_get_performance(client, batch_size=10):
 r2_c1 = raw_get_performance(c1, 5)
 r2_c2 = raw_get_performance(c2, 50)
 r2_c3 = raw_get_performance(c3, 200)
+
+# %%
+plt.plot(np.arange(1, len(r2_c1)+1)*5, r2_c1)
+plt.plot(np.arange(1, len(r2_c2)+1)*50, r2_c2)
+plt.plot(np.arange(1, len(r2_c3)+1)*200, r2_c3)
+
+plt.plot([0, 10000], [0, 0], '-k')
+plt.ylim([-1, 1])
+plt.xscale("log")
+plt.show()
+
+
+# %% [markdown]
+# ## Extend data, custom model
+
+# %%
+def raw_get_performance_extended(client, collab_client, batch_size=100):
+    X, Y = next(client.raw_batch_data(bsize=1_000_000))
+    r2_extended = []
+    
+    for bx, by in collab_client.raw_batch_data(batch_size):
+        X = np.vstack([X, bx])
+        Y = np.hstack([Y, by])
+        model.fit(X, Y)
+        
+        r2_extended.append(client.raw_r2(model))
+        print(".", end="")
+    
+    print()
+    return r2_extended
+
+
+# %%
+r2_c1_c2 = raw_get_performance_extended(c1, c2, 50)
+r2_c1_c3 = raw_get_performance_extended(c1, c3, 200)
+r2_c2_c3 = raw_get_performance_extended(c2, c3, 200)
 
 # %%
 plt.plot(np.arange(1, len(r2_c1)+1)*5, r2_c1)
