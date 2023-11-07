@@ -26,7 +26,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
 
 # %% [markdown] jp-MarkdownHeadingCollapsed=true
-# # Play with stuff
+# # Prepare data
 
 # %%
 # check this code complexity
@@ -38,10 +38,25 @@ data = fetch_california_housing()
 X = pd.DataFrame(data.data, columns=data.feature_names)
 Y = data.target
 
+# %%
+# Split in geographical blocks
+
 data_records = {
     1: {"n_train": 100, "X": X[X.Latitude > 40], "Y": Y[X.Latitude > 40]},
     2: {"n_train": 1000, "X": X[X.Longitude > -118], "Y": Y[X.Longitude > -118]},
     3: {"n_train": 10_000, "X": X[(X.Longitude <= -118) & (X.Latitude <= 40)], "Y": Y[(X.Longitude <= -118) & (X.Latitude <= 40)]},
+}
+
+# %%
+# split randomly
+
+X1, X23, Y1, Y23 = train_test_split(X, Y, train_size = data_records[1]["X"].shape[0])
+X2, X3, Y2, Y3 = train_test_split(X23, Y23, train_size = data_records[2]["X"].shape[0])
+
+data_records_random = {
+    1: {"n_train": 100, "X": X1, "Y": Y1},
+    2: {"n_train": 1000, "X": X2, "Y": Y2},
+    3: {"n_train": 10_000, "X": X3, "Y": Y3},
 }
 
 # %%
@@ -59,10 +74,13 @@ class client:
     def __init__(self, client_index, scaler):
         if client_index not in (1,2,3):
             raise ValueError("Clients support only numbers 1,2,3")
-            
-        X = data_records[client_index]["X"]
-        Y = data_records[client_index]["Y"]
-        self.n = data_records[client_index]["n_train"]
+
+        records = data_records
+        # records = data_records_random
+        
+        X = records[client_index]["X"]
+        Y = records[client_index]["Y"]
+        self.n = records[client_index]["n_train"]
         
         # data is private, nobody can read from the outside
         X = np.array(scaler.transform(X))
@@ -82,19 +100,19 @@ class client:
             raise ValueError("ELM not initialized")        
     
     @property
-    def _H(self):
+    def __H(self):
         self._has_elm()
         XW = self.__X @ self.W + self.bias
         return np.tanh(XW)
     
     @property
     def HH(self):
-        H = self._H
+        H = self.__H
         return H.T@H
 
     @property
     def HY(self):
-        H = self._H
+        H = self.__H
         return H.T@self.__Y
 
     @property
@@ -108,7 +126,7 @@ class client:
     @property
     def r2_train(self):
         self._has_elm()
-        Yh = self._H @ self.B
+        Yh = self.__H @ self.B
         return r2_score(y_true=self.__Y, y_pred=Yh)
         
     @property
@@ -120,12 +138,156 @@ class client:
         Yh = np.tanh(XsW) @ self.B
         return r2_score(y_true=self.__Y_test, y_pred=Yh)
 
+    def batch_data(self, bsize=100):
+        print(f"Return {len(range(0, self.n, bsize))} batches of size {bsize}")
+        H = self.__H
+        Y = self.__Y
+        for i in range(0, self.n, bsize):
+            bH = H[i: i+bsize]
+            bY = Y[i: i+bsize]
+            # normalize matrices to 1-sample
+            # count = min(self.n - i, bsize)  
+            count = 1
+            yield (bH.T@bH / count, bH.T@bY / count)
 
-# %% [markdown]
-# ## Run some stuff
 
 # %%
 scaler = RobustScaler().fit(X)
+
+# %% [markdown]
+# ## Find independent performance in 100-batches
+
+# %%
+# create ELM
+
+n = X.shape[1]  # 8 inputs
+L = 50
+W = np.random.randn(n, L)
+bias = np.random.randn(1, L)
+
+c1 = client(1, scaler)
+c2 = client(2, scaler)
+c3 = client(3, scaler)
+
+c1.init_elm(L, W, bias)
+c2.init_elm(L, W, bias)
+c3.init_elm(L, W, bias)
+
+
+# %%
+def get_optimal_performance(client, batch_size=100):
+    L2 = np.logspace(-5, 3, num=20)
+    HH = 0
+    HY = 0
+    bsize = 10
+    
+    r2_test = []
+    
+    for hh, hy in client.batch_data(batch_size):
+        HH += hh
+        HY += hy
+        
+        # find best performance
+        r2 = -999
+        for l2 in L2:
+            client.B = np.linalg.lstsq(HH + l2*np.eye(L), HY, rcond=None)[0]
+            r2 = max(r2, client.r2)
+        r2_test.append(r2)
+        print(".", end="")
+
+    print()
+    return r2_test
+
+
+# %%
+r2_c1 = get_optimal_performance(c1, 5)
+r2_c2 = get_optimal_performance(c2, 50)
+r2_c3 = get_optimal_performance(c3, 200)
+
+# %%
+plt.plot(np.arange(1, len(r2_c1)+1)*5, r2_c1)
+plt.plot(np.arange(1, len(r2_c2)+1)*50, r2_c2)
+plt.plot(np.arange(1, len(r2_c3)+1)*200, r2_c3)
+
+plt.plot([0, 10000], [0, 0], '-k')
+plt.ylim([-1, 1])
+plt.xscale("log")
+plt.show()
+
+
+# %% [markdown]
+# ## Extend single client performance with more data
+
+# %%
+# # create ELM
+
+# n = X.shape[1]  # 8 inputs
+# L = 50
+# W = np.random.randn(n, L)
+# bias = np.random.randn(1, L)
+
+# c1 = client(1, scaler)
+# c2 = client(2, scaler)
+# c3 = client(3, scaler)
+
+# c1.init_elm(L, W, bias)
+# c2.init_elm(L, W, bias)
+# c3.init_elm(L, W, bias)
+
+# %%
+def get_optimal_performance_extended(client, collab_client, batch_size=100):
+    L2 = np.logspace(-5, 3, num=30)
+    HH = client.HH
+    HY = client.HY    
+    r2_extended = []
+
+    r2 = -999
+    for l2 in L2:
+        client.B = np.linalg.lstsq(HH + l2*np.eye(L), HY, rcond=None)[0]
+        r2 = max(r2, client.r2)
+    r2_extended.append(r2)
+    
+    # streaming data from collab client, evaluate for the original client
+    for hh, hy in collab_client.batch_data(batch_size):
+        HH += hh
+        HY += hy
+        
+        # find best performance
+        r2 = -999
+        for l2 in L2:
+            client.B = np.linalg.lstsq(HH + l2*np.eye(L), HY, rcond=None)[0]
+            r2 = max(r2, client.r2)
+        r2_extended.append(r2)
+        print(".", end="")
+
+    print()
+    return r2_extended
+
+
+# %%
+r2_c1_c2 = get_optimal_performance_extended(c1, c2, 50)
+r2_c1_c3 = get_optimal_performance_extended(c1, c3, 200)
+r2_c2_c3 = get_optimal_performance_extended(c2, c3, 200)
+
+# %%
+plt.plot(np.arange(1, len(r2_c1)+1)*5, r2_c1, '-b')
+plt.plot(np.arange(0, len(r2_c1_c2))*50 + 100, r2_c1_c2, '--b')
+plt.plot(np.arange(0, len(r2_c1_c3))*200 + 100, r2_c1_c3, '--b')
+
+plt.plot(np.arange(1, len(r2_c2)+1)*50, r2_c2, c="orange")
+plt.plot(np.arange(0, len(r2_c2_c3))*200 + 1000, r2_c2_c3, '--', c="orange")
+
+plt.plot(np.arange(1, len(r2_c3)+1)*200, r2_c3)
+
+plt.plot([0, 10000], [0, 0], '-k')
+plt.ylim([-1, 1])
+plt.xscale("log")
+plt.show()
+
+# %%
+
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# ## Run stuff
 
 # %% editable=true slideshow={"slide_type": ""}
 c1 = client(1, scaler)
