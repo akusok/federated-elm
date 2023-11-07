@@ -150,11 +150,24 @@ class client:
             count = 1
             yield (bH.T@bH / count, bH.T@bY / count)
 
+    def raw_batch_data(self, bsize=100):
+        """Test for limits of federated learning with arbitrary models
+        """
+        X = self.__X
+        Y = self.__Y
+        for i in range(0, self.n, bsize):
+            bX = X[i: i+bsize]
+            bY = Y[i: i+bsize]
+            yield bX, bY
+
+    def raw_r2(self, model):
+        return r2_score(y_true=self.__Y_test, y_pred=model.predict(self.__X_test))
+
 
 # %%
 scaler = RobustScaler().fit(X)
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ## Get clients
 
 # %%
@@ -182,7 +195,6 @@ def get_optimal_performance(client, batch_size=100):
     L2 = np.logspace(-5, 3, num=20)
     HH = 0
     HY = 0
-    bsize = 10
     
     r2_test = []
     
@@ -218,7 +230,7 @@ plt.xscale("log")
 plt.show()
 
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ## Extend single client performance with more data
 
 # %%
@@ -271,7 +283,48 @@ plt.ylim([-1, 1])
 plt.xscale("log")
 plt.show()
 
+# %% [markdown]
+# ## Test with raw data and custom model
+
 # %%
+from sklearn.ensemble import RandomForestRegressor
+
+# %%
+model = RandomForestRegressor(n_jobs=8)
+
+
+# %%
+def raw_get_performance(client, batch_size=10):
+    X = np.empty([0, 8])
+    Y = np.empty([0, ])
+    r2_test = []
+    
+    for bx, by in client.raw_batch_data(batch_size):
+        X = np.vstack([X, bx])
+        Y = np.hstack([Y, by])
+        model.fit(X, Y)
+        
+        r2_test.append(client.raw_r2(model))
+        print(".", end="")
+    
+    print()
+    return r2_test
+
+
+# %%
+r2_c1 = raw_get_performance(c1, 5)
+r2_c2 = raw_get_performance(c2, 50)
+r2_c3 = raw_get_performance(c3, 200)
+
+# %%
+plt.plot(np.arange(1, len(r2_c1)+1)*5, r2_c1)
+plt.plot(np.arange(1, len(r2_c2)+1)*50, r2_c2)
+plt.plot(np.arange(1, len(r2_c3)+1)*200, r2_c3)
+
+plt.plot([0, 10000], [0, 0], '-k')
+plt.ylim([-1, 1])
+plt.xscale("log")
+plt.show()
 
 # %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ## Run stuff
