@@ -94,3 +94,32 @@ class Client:
 
     def raw_r2(self, model):
         return r2_score(y_true=self.__Y_test, y_pred=model.predict(self.__X_test))
+
+
+class ClientNoiseHH(Client):
+    def __init__(self, client_index, scaler, records):
+        super().__init__(client_index, scaler, records)
+        self._noise_HH = None
+        self._noise_HH_matrix = None
+    
+    @property
+    def noise_HH(self):
+        return self._noise_HH
+    
+    @noise_HH.setter
+    def noise_HH(self, value):
+        self._has_elm()
+        self._noise_HH = value
+        A_noise = np.random.randn(self.L, self.L)
+        self._noise_HH_matrix = value * (A_noise.T @ A_noise) / self.L**0.5
+
+    @property
+    def HH(self):
+        H = self.__H
+        return H.T@H + self.noise_HH_matrix
+
+    def batch_data(self, bsize=100):
+        gen = super().batch_data(bsize)
+        for hh, hy in gen:
+            yield (hh + self._noise_HH_matrix, hy)
+    
