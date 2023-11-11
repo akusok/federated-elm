@@ -16,7 +16,7 @@
 # %% editable=true slideshow={"slide_type": ""}
 import numpy as np
 import pandas as pd
-import seaborn as sn
+import seaborn as sns
 from matplotlib import pyplot as plt
 
 from sklearn.preprocessing import RobustScaler
@@ -28,20 +28,10 @@ from client import Client, ClientNoiseHH
 
 # %%
 # %config InlineBackend.figure_format='retina'
+plt.rcParams['figure.figsize'] = [10, 6]
 
 # %% [markdown]
-# ## test
-
-# %%
-a = np.random.randn(5, 5)
-X = (a.T@a / 5**0.5 * 1e-3)
-print(X[:3,:3])
-np.abs(X).mean()
-
-# %%
-
-# %% [markdown]
-# # Prepare data
+# ## Prepare data
 
 # %%
 data = fetch_california_housing()
@@ -98,10 +88,6 @@ c1.init_elm(L, W, bias)
 c2.init_elm(L, W, bias)
 c3.init_elm(L, W, bias)
 
-c1.noise_HH = 1e-5
-c2.noise_HH = 1e-5
-c3.noise_HH = 1e-5
-
 
 # %% [markdown]
 # ## Find independent performance in 100-batches
@@ -130,24 +116,46 @@ def get_optimal_performance(client, batch_size=100):
     return r2_test
 
 
-# %%
-r2_c1 = get_optimal_performance(c1, 5)
-r2_c2 = get_optimal_performance(c2, 50)
-r2_c3 = get_optimal_performance(c3, 200)
+# %% [markdown]
+# ## Get noise effect data
 
 # %%
-plt.plot(np.arange(1, len(r2_c1)+1)*5, r2_c1)
-plt.plot(np.arange(1, len(r2_c2)+1)*50, r2_c2)
-plt.plot(np.arange(1, len(r2_c3)+1)*200, r2_c3)
+test_data = []
+
+for noise in (-99, *np.linspace(-3, 0, num=10)):
+    print(noise)
+    for c, bsize, idx in zip([c1, c2, c3], [5, 50, 300], [1, 2, 3]):
+        c.noise_H = 0 if noise10**noise  # logarithmic noise
+        r2_c = get_optimal_performance(c, bsize)
+        counts = np.arange(1, len(r2_c)+1) * bsize
+        for n,r2 in zip(counts, r2_c):
+            test_data.append({"client": idx, "samples": n, "noise": noise, "r2": r2})
+
+test_df = pd.DataFrame(test_data)
+
+# %%
+best_noise = min(test_df.noise)
+
+for idx in [1,2,3]:
+    sns.lineplot(
+        test_df[test_df.client == idx], 
+        x="samples", y="r2", units="noise", 
+        color=".7", linewidth=1, estimator=None
+    )
+    sns.lineplot(
+        test_df[(test_df.client == idx) & (test_df.noise == -3)], 
+        x="samples", y="r2"
+    )
 
 plt.plot([0, 10000], [0, 0], '-k')
-plt.ylim([-1, 1])
+# plt.ylim([-1, 1])
 plt.xscale("log")
+plt.grid("major", axis="y")
 plt.show()
 
 
-# %% [markdown]
-# ## Extend single client performance with more data
+# %% jp-MarkdownHeadingCollapsed=true
+## Extend single client performance with more data
 
 # %%
 def get_optimal_performance_extended(client, collab_client, batch_size=100):
