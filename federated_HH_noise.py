@@ -76,7 +76,7 @@ scaler = RobustScaler().fit(X)
 # create ELM
 
 n = X.shape[1]  # 8 inputs
-L = 50
+L = 30
 W = np.random.randn(n, L)
 bias = np.random.randn(1, L)
 
@@ -120,12 +120,15 @@ def get_optimal_performance(client, batch_size=100):
 # ## Get noise effect data
 
 # %%
+np.linspace(-2, 1, num=20)
+
+# %% jupyter={"outputs_hidden": true}
 test_data = []
 
-for noise in (-99, *np.linspace(-3, 0, num=10)):
+for noise in (-99, *np.linspace(-4, 1, num=20)):
     print(noise)
     for c, bsize, idx in zip([c1, c2, c3], [5, 50, 300], [1, 2, 3]):
-        c.noise_H = 0 if noise10**noise  # logarithmic noise
+        c.noise_H = 0 if noise==-99 else 10**noise  # logarithmic noise with no-noise special case
         r2_c = get_optimal_performance(c, bsize)
         counts = np.arange(1, len(r2_c)+1) * bsize
         for n,r2 in zip(counts, r2_c):
@@ -134,24 +137,52 @@ for noise in (-99, *np.linspace(-3, 0, num=10)):
 test_df = pd.DataFrame(test_data)
 
 # %%
-best_noise = min(test_df.noise)
-
 for idx in [1,2,3]:
     sns.lineplot(
         test_df[test_df.client == idx], 
         x="samples", y="r2", units="noise", 
         color=".7", linewidth=1, estimator=None
     )
+
+    # find worse performance
     sns.lineplot(
-        test_df[(test_df.client == idx) & (test_df.noise == -3)], 
-        x="samples", y="r2"
+        test_df[(test_df.client == idx) & (test_df.noise > -0.7)], 
+        x="samples", y="r2", units="noise", 
+        color="r", linewidth=1, estimator=None
     )
 
+    sns.lineplot(
+        test_df[(test_df.client == idx) & (test_df.noise == -1.1052631578947372)], 
+        x="samples", y="r2", units="noise", 
+        color="black", linestyle='dashed', linewidth=1.5, estimator=None
+    )
+
+# no noise case
+for idx in [1,2,3]:
+    sns.lineplot(
+        test_df[(test_df.client == idx) & (test_df.noise == -99)], 
+        x="samples", y="r2", linewidth=2.5
+    )
+    
 plt.plot([0, 10000], [0, 0], '-k')
 # plt.ylim([-1, 1])
+plt.ylim([-0.15, 0.55])
 plt.xscale("log")
 plt.grid("major", axis="y")
 plt.show()
+
+# %% [markdown]
+# # c1.noise_H = 0
+# c1.HH[:3, :3]
+# sns.heatmap(c1.HH / np.std(c1.HH), vmin=-3, vmax=3, square=True)
+
+# %% [markdown]
+# # 
+
+# %%
+c1.noise_H = -1
+c1.HH[:3, :3]
+sns.heatmap(c1.HH / np.std(c1.HH), vmin=-3, vmax=3, square=True)
 
 
 # %% jp-MarkdownHeadingCollapsed=true
