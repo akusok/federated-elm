@@ -76,7 +76,7 @@ scaler = RobustScaler().fit(X)
 # create ELM
 
 n = X.shape[1]  # 8 inputs
-L = 30
+L = 99
 W = np.random.randn(n, L)
 bias = np.random.randn(1, L)
 
@@ -120,12 +120,9 @@ def get_optimal_performance(client, batch_size=100):
 # ## Get noise effect data
 
 # %%
-np.linspace(-2, 1, num=20)
-
-# %% jupyter={"outputs_hidden": true}
 test_data = []
 
-for noise in (-99, *np.linspace(-4, 1, num=20)):
+for noise in (-99, *np.linspace(-2, 1, num=3*8+1)):
     print(noise)
     for c, bsize, idx in zip([c1, c2, c3], [5, 50, 300], [1, 2, 3]):
         c.noise_H = 0 if noise==-99 else 10**noise  # logarithmic noise with no-noise special case
@@ -135,6 +132,40 @@ for noise in (-99, *np.linspace(-4, 1, num=20)):
             test_data.append({"client": idx, "samples": n, "noise": noise, "r2": r2})
 
 test_df = pd.DataFrame(test_data)
+
+# %%
+for idx in [1,2,3]:
+    sns.lineplot(
+        test_df[test_df.client == idx], 
+        x="samples", y="r2", units="noise", 
+        color=".7", linewidth=1, estimator=None
+    )
+
+    # find worse performance
+    sns.lineplot(
+        test_df[(test_df.client == idx) & (test_df.noise > -0.9)], 
+        x="samples", y="r2", units="noise", 
+        color="r", linewidth=1, estimator=None
+    )
+
+    sns.lineplot(
+        test_df[(test_df.client == idx) & (test_df.noise == -1.0)], 
+        x="samples", y="r2", units="noise", 
+        color="black", linestyle='dashed', linewidth=1.5, estimator=None
+    )
+
+# no noise case
+for idx in [1,2,3]:
+    sns.lineplot(
+        test_df[(test_df.client == idx) & (test_df.noise == -99)], 
+        x="samples", y="r2", linewidth=2.5
+    )
+    
+plt.plot([0, 10000], [0, 0], '-k')
+plt.ylim([-0.15, 0.75])
+plt.xscale("log")
+plt.grid("major", axis="y")
+plt.show()
 
 # %%
 for idx in [1,2,3]:
@@ -172,158 +203,20 @@ plt.grid("major", axis="y")
 plt.show()
 
 # %% [markdown]
-# # c1.noise_H = 0
-# c1.HH[:3, :3]
-# sns.heatmap(c1.HH / np.std(c1.HH), vmin=-3, vmax=3, square=True)
-
-# %% [markdown]
-# # 
+# ## Look at HH values with "acceptable" noise of 10**-1
 
 # %%
-c1.noise_H = -1
-c1.HH[:3, :3]
-sns.heatmap(c1.HH / np.std(c1.HH), vmin=-3, vmax=3, square=True)
+print("no noise")
+c1.noise_H = 0
+print(c1.HH[:3,:5])
 
-
-# %% jp-MarkdownHeadingCollapsed=true
-## Extend single client performance with more data
-
-# %%
-def get_optimal_performance_extended(client, collab_client, batch_size=100):
-    L2 = np.logspace(-5, 3, num=30)
-    HH = client.HH
-    HY = client.HY    
-    r2_extended = []
-
-    r2 = -999
-    for l2 in L2:
-        client.B = np.linalg.lstsq(HH + l2*np.eye(L), HY, rcond=None)[0]
-        r2 = max(r2, client.r2)
-    r2_extended.append(r2)
-    
-    # streaming data from collab client, evaluate for the original client
-    for hh, hy in collab_client.batch_data(batch_size):
-        HH += hh
-        HY += hy
-        
-        # find best performance
-        r2 = -999
-        for l2 in L2:
-            client.B = np.linalg.lstsq(HH + l2*np.eye(L), HY, rcond=None)[0]
-            r2 = max(r2, client.r2)
-        r2_extended.append(r2)
-        print(".", end="")
-
-    print()
-    return r2_extended
-
+print("noise of 10**-1")
+c1.noise_H = 0.1
+print(c1.HH[:3,:5])
 
 # %%
-r2_c1_c2 = get_optimal_performance_extended(c1, c2, 50)
-r2_c1_c3 = get_optimal_performance_extended(c1, c3, 200)
-r2_c2_c3 = get_optimal_performance_extended(c2, c3, 200)
 
 # %%
-plt.plot(np.arange(1, len(r2_c1)+1)*5, r2_c1, '-b')
-plt.plot(np.arange(0, len(r2_c1_c2))*50 + 100, r2_c1_c2, '--b')
-plt.plot(np.arange(0, len(r2_c1_c3))*200 + 100, r2_c1_c3, '--b')
-
-plt.plot(np.arange(1, len(r2_c2)+1)*50, r2_c2, c="orange")
-plt.plot(np.arange(0, len(r2_c2_c3))*200 + 1000, r2_c2_c3, '--', c="orange")
-
-plt.plot(np.arange(1, len(r2_c3)+1)*200, r2_c3)
-
-plt.plot([0, 10000], [0, 0], '-k')
-plt.ylim([-0.2, 0.8])
-plt.xscale("log")
-plt.show()
-
-# %% [markdown]
-# ## Test with raw data and custom model
-
-# %%
-model = RandomForestRegressor(n_estimators=30, n_jobs=6)
-
-
-# %%
-def raw_get_performance(client, batch_size=10):
-    X = np.empty([0, 8])
-    Y = np.empty([0, ])
-    r2_test = []
-    
-    for bx, by in client.raw_batch_data(batch_size):
-        X = np.vstack([X, bx])
-        Y = np.hstack([Y, by])
-        model.fit(X, Y)
-        
-        r2_test.append(client.raw_r2(model))
-        print(".", end="")
-    
-    print()
-    return r2_test
-
-
-# %%
-r2_c1 = raw_get_performance(c1, 5)
-r2_c2 = raw_get_performance(c2, 50)
-r2_c3 = raw_get_performance(c3, 300)
-
-# %%
-plt.plot(np.arange(1, len(r2_c1)+1)*5, r2_c1)
-plt.plot(np.arange(1, len(r2_c2)+1)*50, r2_c2)
-plt.plot(np.arange(1, len(r2_c3)+1)*300, r2_c3)
-
-plt.plot([0, 10000], [0, 0], '-k')
-plt.ylim([-1, 1])
-plt.xscale("log") 
-plt.show()
-
-
-# %% [markdown]
-# ## Extend data, custom model
-
-# %%
-def raw_get_performance_extended(client, collab_client, batch_size=100):
-    X, Y = next(client.raw_batch_data(bsize=1_000_000))
-    r2_extended = []
-
-    model.fit(X, Y)
-    r2_extended.append(client.raw_r2(model))
-    
-    for bx, by in collab_client.raw_batch_data(batch_size):
-        X = np.vstack([X, bx])
-        Y = np.hstack([Y, by])
-        model.fit(X, Y)
-        
-        r2_extended.append(client.raw_r2(model))
-        print(".", end="")
-    
-    print()
-    return r2_extended
-
-
-# %%
-r2_c1_c2 = raw_get_performance_extended(c1, c2, 50)
-r2_c1_c3 = raw_get_performance_extended(c1, c3, 300)
-r2_c2_c3 = raw_get_performance_extended(c2, c3, 300)
-
-# %%
-plt.plot(np.arange(1, len(r2_c1)+1)*5, r2_c1, '-b')
-plt.plot(np.arange(0, len(r2_c1_c2))*50 + 100, r2_c1_c2, '--b')
-plt.plot(np.arange(0, len(r2_c1_c3))*300 + 100, r2_c1_c3, '--b')
-
-plt.plot(np.arange(1, len(r2_c2)+1)*50, r2_c2, c="orange")
-plt.plot(np.arange(0, len(r2_c2_c3))*300 + 1000, r2_c2_c3, '--', c="orange")
-
-plt.plot(np.arange(1, len(r2_c3)+1)*200, r2_c3)
-
-plt.plot([0, 10000], [0, 0], '-k')
-plt.ylim([-0.2, 0.8])
-plt.xscale("log")
-plt.show()
-
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
-# ## Run stuff
 
 # %% editable=true slideshow={"slide_type": ""}
 c1 = Client(1, scaler)
