@@ -22,7 +22,6 @@ from matplotlib import pyplot as plt
 from sklearn.preprocessing import RobustScaler
 from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
 
 from client import Client, ClientNoiseHH
 
@@ -60,7 +59,7 @@ data_records_random = {
 }
 
 # %%
-X.shape
+print(X.shape)
 
 # %% [markdown]
 # ## Get clients
@@ -213,59 +212,3 @@ print(c1.HH[:3,:5])
 print("noise of 10**-1")
 c1.noise_H = 0.1
 print(c1.HH[:3,:5])
-
-# %%
-
-# %%
-
-# %% editable=true slideshow={"slide_type": ""}
-c1 = Client(1, scaler)
-
-# %%
-# create ELM
-
-n = X.shape[1]  # 8 inputs
-L = 999
-W = np.random.randn(n, L)
-bias = np.random.randn(1, L)
-
-# %%
-c1.init_elm(L, W, bias)
-
-# %%
-c1.HH[:2, :4], c1.HY[:4]
-
-# %%
-B = np.linalg.lstsq(c1.HH + 1e+1*np.eye(L), c1.HY, rcond=None)[0]
-c1.B = B
-print(c1.r2_train)
-print(c1.r2)
-
-# %%
-a = np.logspace(-5, 3)
-r2_train = []
-r2_test = []
-
-for a1 in a:
-    B = np.linalg.lstsq(c1.HH + a1*np.eye(L), c1.HY, rcond=None)[0]
-    c1.B = B
-    r2_train.append(c1.r2_train)
-    r2_test.append(c1.r2)
-
-# %%
-sn.lineplot(x=np.log10(a), y=r2_train)
-sn.lineplot(x=np.log10(a), y=r2_test)
-sn.lineplot(x=[-5, 3], y=[0, 0])
-plt.ylim(-1, 1.1)
-
-# %%
-sn.lineplot(x=np.log10(a), y=r2_train)
-sn.lineplot(x=np.log10(a), y=r2_test)
-sn.lineplot(x=[-5, 3], y=[0, 0])
-plt.ylim(-0.1, 0.05)
-
-# %%
-
-# %%
-
-# %%
