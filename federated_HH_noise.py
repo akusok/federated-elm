@@ -23,7 +23,7 @@ from sklearn.preprocessing import RobustScaler
 from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
 
-from client import Client, ClientNoiseHH
+from client import ClientNoiseHH
 
 # %%
 # %config InlineBackend.figure_format='retina'

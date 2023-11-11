@@ -16,8 +16,7 @@
 # %% editable=true slideshow={"slide_type": ""}
 import numpy as np
 import pandas as pd
-import pygwalker as pig
-import seaborn as sn
+# import pygwalker as pig
 from matplotlib import pyplot as plt
 
 from sklearn.preprocessing import RobustScaler
