@@ -65,7 +65,7 @@ data_records_random = {
 }
 
 # %%
-X.shape
+print(X.shape)
 
 # %%
 # pig.walk(X.iloc[::4])
@@ -279,58 +279,3 @@ plt.plot([0, 10000], [0, 0], '-k')
 plt.ylim([-0.2, 0.8])
 plt.xscale("log")
 plt.show()
-
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
-# ## Run stuff
-
-# %% editable=true slideshow={"slide_type": ""}
-c1 = Client(1, scaler)
-
-# %%
-# create ELM
-
-n = X.shape[1]  # 8 inputs
-L = 999
-W = np.random.randn(n, L)
-bias = np.random.randn(1, L)
-
-# %%
-c1.init_elm(L, W, bias)
-
-# %%
-c1.HH[:2, :4], c1.HY[:4]
-
-# %%
-B = np.linalg.lstsq(c1.HH + 1e+1*np.eye(L), c1.HY, rcond=None)[0]
-c1.B = B
-print(c1.r2_train)
-print(c1.r2)
-
-# %%
-a = np.logspace(-5, 3)
-r2_train = []
-r2_test = []
-
-for a1 in a:
-    B = np.linalg.lstsq(c1.HH + a1*np.eye(L), c1.HY, rcond=None)[0]
-    c1.B = B
-    r2_train.append(c1.r2_train)
-    r2_test.append(c1.r2)
-
-# %%
-sn.lineplot(x=np.log10(a), y=r2_train)
-sn.lineplot(x=np.log10(a), y=r2_test)
-sn.lineplot(x=[-5, 3], y=[0, 0])
-plt.ylim(-1, 1.1)
-
-# %%
-sn.lineplot(x=np.log10(a), y=r2_train)
-sn.lineplot(x=np.log10(a), y=r2_test)
-sn.lineplot(x=[-5, 3], y=[0, 0])
-plt.ylim(-0.1, 0.05)
-
-# %%
-
-# %%
-
-# %%
