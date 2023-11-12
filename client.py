@@ -17,6 +17,8 @@ class Client:
         X = np.array(scaler.transform(X))
         Y = np.array(Y)
         self.X, self.X_test, self.Y, self.Y_test = train_test_split(X, Y, train_size=self.n)
+        self.X_test = self.X_test[:400]
+        self.Y_test = self.Y_test[:400]
 
         # future ELM params
         self.L, self.W, self.bias, self._B = None, None, None, None

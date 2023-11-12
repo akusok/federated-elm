@@ -25,7 +25,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 
 from client import Client
-from utils import RECORDS_RANDOM, SCALER, get_optimal_performance, get_optimal_performance_extended
+from utils import RECORDS_RANDOM, RECORDS_GEOGRAPHICAL, SCALER, get_optimal_performance, get_optimal_performance_extended
 
 # %%
 # %config InlineBackend.figure_format='retina'
@@ -55,26 +55,48 @@ bsize3 = np.logspace(2, 4, num=15).astype(int)
 bsize = [bsize1, bsize2, bsize3]
 
 # %% [markdown]
-# ## Basic federated performance
+# ## Run experiments
 
 # %%
 test_data = []
+test_data_2 = []
 
 for run in range(10):
     print(run, end="  ")
     clients = get_clients()
+    c1, c2, c3 = clients
+
     for idx, c in enumerate(clients):
         r2_c = get_optimal_performance(c, None, bsize[idx])
         for n, r2 in zip(bsize[idx], r2_c):
             test_data.append({"run": run, "client": idx, "samples": n, "r2": r2})
 
+    r2_c1_c2 = get_optimal_performance_extended(c1, c2, bsize2)
+    for n, r2 in zip((0, *bsize2), r2_c1_c2):  # first data point comes without extra training samples
+        test_data_2.append({"run": run, "client": "c1_c2", "samples": n+100, "r2": r2})
+
+    r2_c1_c3 = get_optimal_performance_extended(c1, c3, bsize3)
+    for n, r2 in zip((0, *bsize3), r2_c1_c3):
+        test_data_2.append({"run": run, "client": "c1_c3", "samples": n+100, "r2": r2})
+
+    r2_c2_c3 = get_optimal_performance_extended(c2, c3, bsize3)
+    for n, r2 in zip((0, *bsize3), r2_c2_c3):
+        test_data_2.append({"run": run, "client": "c2_c3", "samples": n+1000, "r2": r2})
+
 test_df = pd.DataFrame(test_data)
+test_df_2 = pd.DataFrame(test_data_2)
 
-# %%
 test_df.to_csv("data_basic.csv")
+test_df_2.to_csv("data_basic_fed.csv")
+
+# %% [markdown]
+# ## Basic federated performance
 
 # %%
-plt.rcParams['figure.figsize'] = [5, 3]
+test_df = pd.read_csv("data_basic.csv")
+
+# %%
+plt.rcParams['figure.figsize'] = [4, 3]
 
 # no noise case
 for idx, name in zip([0,1,2], ["client 1", "client 2", "client 3"]):
@@ -97,35 +119,10 @@ plt.show()
 # ## Extend single client performance with more data
 
 # %%
-test_data_2 = []
-
-for run in range(10):
-    print(run, end="  ")
-    clients = get_clients()
-    
-    for idx, c in enumerate(clients):
-        r2_c1_c2 = get_optimal_performance_extended(c1, c2, bsize2)
-        for n, r2 in zip((0, *bsize2), r2_c1_c2):
-            test_data_2.append({"run": run, "client": "c1_c2", "samples": n+100, "r2": r2})
-
-        r2_c1_c3 = get_optimal_performance_extended(c1, c3, bsize3)
-        for n, r2 in zip((0, *bsize3), r2_c1_c3):
-            test_data_2.append({"run": run, "client": "c1_c3", "samples": n+100, "r2": r2})
-
-        r2_c2_c3 = get_optimal_performance_extended(c2, c3, bsize3)
-        for n, r2 in zip((0, *bsize3), r2_c2_c3):
-            test_data_2.append({"run": run, "client": "c2_c3", "samples": n+1000, "r2": r2})
-
-test_df_2 = pd.DataFrame(test_data_2)
+test_df_2 = pd.read_csv("data_basic_fed.csv")
 
 # %%
-test_df_2.to_csv("data_basic_fed.csv")
-
-# %%
-test_df = pd.read_csv("data_basic.csv")
-
-# %%
-plt.rcParams['figure.figsize'] = [5, 3]
+plt.rcParams['figure.figsize'] = [4, 3]
 
 # no noise case
 for idx, name in zip([0,1,2], ["client 1", "client 2", "client 3"]):
@@ -136,17 +133,17 @@ for idx, name in zip([0,1,2], ["client 1", "client 2", "client 3"]):
 
 sns.lineplot(
     test_df_2[test_df_2.client == "c1_c2"], 
-    x="samples", y="r2", linestyle="--", linewidth=2, label="client 1+2"
+    x="samples", y="r2", linestyle=":", linewidth=2, label="client 1+2"
 )
 
 sns.lineplot(
     test_df_2[test_df_2.client == "c1_c3"], 
-    x="samples", y="r2", linestyle="--", linewidth=2, label="client 1+3"
+    x="samples", y="r2", linestyle=":", linewidth=2, label="client 1+3"
 )
 
 sns.lineplot(
     test_df_2[test_df_2.client == "c2_c3"], 
-    x="samples", y="r2", linestyle="--", linewidth=2, label="client 2+3"
+    x="samples", y="r2", linestyle=":", linewidth=2, label="client 2+3"
 )
 
 
@@ -159,6 +156,107 @@ plt.grid("major", axis="y")
 
 plt.savefig("fig_basic_fed.pdf", bbox_inches="tight")
 plt.show()
+
+
+# %% [markdown]
+# ## Test with non-IID clients
+
+# %%
+def get_clients_geo():
+    clients = [Client(idx, SCALER, RECORDS_GEOGRAPHICAL) for idx in [1,2,3]]
+    [c.init_elm(L, W, bias) for c in clients]
+    return clients
+
+
+# %%
+test_data_geo = []
+test_data_2_geo = []
+
+for run in range(10):
+    print(run, end="  ")
+    clients = get_clients_geo()
+    c1, c2, c3 = clients
+
+    for idx, c in enumerate(clients):
+        r2_c = get_optimal_performance(c, None, bsize[idx])
+        for n, r2 in zip(bsize[idx], r2_c):
+            test_data_geo.append({"run": run, "client": idx, "samples": n, "r2": r2})
+
+    r2_c1_c2 = get_optimal_performance_extended(c1, c2, bsize2)
+    for n, r2 in zip((0, *bsize2), r2_c1_c2):  # first data point comes without extra training samples
+        test_data_2_geo.append({"run": run, "client": "c1_c2", "samples": n+100, "r2": r2})
+
+    r2_c1_c3 = get_optimal_performance_extended(c1, c3, bsize3)
+    for n, r2 in zip((0, *bsize3), r2_c1_c3):
+        test_data_2_geo.append({"run": run, "client": "c1_c3", "samples": n+100, "r2": r2})
+
+    r2_c2_c3 = get_optimal_performance_extended(c2, c3, bsize3)
+    for n, r2 in zip((0, *bsize3), r2_c2_c3):
+        test_data_2_geo.append({"run": run, "client": "c2_c3", "samples": n+1000, "r2": r2})
+
+test_df_geo = pd.DataFrame(test_data_geo)
+test_df_2_geo = pd.DataFrame(test_data_2_geo)
+
+test_df_geo.to_csv("data_basic_geo.csv")
+test_df_2_geo.to_csv("data_basic_fed_geo.csv")
+
+# %%
+plt.rcParams['figure.figsize'] = [4, 3]
+
+# no noise case
+for idx, name in zip([0,1,2], ["client 1", "client 2", "client 3"]):
+    sns.lineplot(
+        test_df_geo[test_df_geo.client == idx], 
+        x="samples", y="r2", linewidth=2.5, label=name
+    )
+
+plt.legend()
+plt.plot([0, 10000], [0, 0], '-k')
+plt.ylim([-0.15, 0.75])
+plt.xlabel("training samples")
+plt.xscale("log")
+plt.grid("major", axis="y")
+
+plt.savefig("fig_basic_geo.pdf", bbox_inches="tight")
+plt.show()
+
+# %%
+plt.rcParams['figure.figsize'] = [4, 3]
+
+# no noise case
+for idx, name in zip([0,1,2], ["client 1", "client 2", "client 3"]):
+    sns.lineplot(
+        test_df_geo[test_df_geo.client == idx], 
+        x="samples", y="r2", linewidth=1
+    )
+
+sns.lineplot(
+    test_df_2_geo[test_df_2_geo.client == "c1_c2"], 
+    x="samples", y="r2", linestyle=":", linewidth=2, label="client 1+2"
+)
+
+sns.lineplot(
+    test_df_2_geo[test_df_2_geo.client == "c1_c3"], 
+    x="samples", y="r2", linestyle=":", linewidth=2, label="client 1+3"
+)
+
+sns.lineplot(
+    test_df_2_geo[test_df_2_geo.client == "c2_c3"], 
+    x="samples", y="r2", linestyle=":", linewidth=2, label="client 2+3"
+)
+
+
+plt.legend()
+plt.plot([0, 10000], [0, 0], '-k')
+plt.ylim([-0.15, 0.75])
+plt.xlabel("training samples")
+plt.xscale("log")
+plt.grid("major", axis="y")
+
+plt.savefig("fig_basic_fed_geo.pdf", bbox_inches="tight")
+plt.show()
+
+# %%
 
 # %% [markdown]
 # ## Test with raw data and custom model
