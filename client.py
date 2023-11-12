@@ -69,17 +69,33 @@ class Client:
         Yh = np.tanh(XsW) @ self.B
         return r2_score(y_true=self.Y_test, y_pred=Yh)
 
-    def batch_data(self, bsize=100):
-        print(f"Return {len(range(0, self.n, bsize))} batches of size {bsize}", end=" ")
+    def batch_data(self, bsize=100, batches=None):
+        # if batches is None:
+        #     print(f"Return {len(range(0, self.n, bsize))} batches of size {bsize}", end=" ")
+        # else:
+        #     print(f"Return {len(batches)} specific batches", end=" ")
         H = self.H
         Y = self.Y
-        for i in range(0, self.n, bsize):
-            bH = H[i : i + bsize]
-            bY = Y[i : i + bsize]
-            # normalize matrices to 1-sample
-            # count = min(self.n - i, bsize)
-            count = 1
-            yield (bH.T @ bH / count, bH.T @ bY / count)
+
+        # old mode with fixed batches
+        if batches is None:
+            for i in range(0, self.n, bsize):
+                bH = H[i : i + bsize]
+                bY = Y[i : i + bsize]
+                # normalize matrices to 1-sample
+                # count = min(self.n - i, bsize)
+                count = 1
+                yield (bH.T @ bH / count, bH.T @ bY / count)
+
+        # new mode with dynamic size batches
+        batches_plus = [*batches, self.n]  # add upper boundary for last batch
+        for i in range(len(batches)):
+            j0 = batches[i]
+            j1 = batches_plus[i+1]
+            bH = H[j0:j1]
+            bY = Y[j0:j1]
+            yield (bH.T @ bH, bH.T @ bY)
+
 
     def raw_batch_data(self, bsize=100):
         """Test for limits of federated learning with arbitrary models"""
