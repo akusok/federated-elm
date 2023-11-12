@@ -232,17 +232,17 @@ HH = batch[0]
 H = c1.H[:1, :3]
 
 # %%
-H[:, :5]
+print(H[:, :5])
 
 # %%
 HH = H.T@H
 
 # %%
-HH
+print(HH)
 
 # %%
 H1 = sp.linalg.sqrtm(HH)
-H1
+print(H1)
 
 # %%
 np.sqrt(np.diag(HH))
