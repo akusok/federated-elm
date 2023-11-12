@@ -110,3 +110,29 @@ class ClientNoiseHH(Client):
         self._has_elm()
         XW = self.X @ self.W + self.bias
         return np.tanh(XW) + self._noise_H
+
+
+class ClientNoiseY(Client):
+    def __init__(self, client_index, scaler, records):
+        super().__init__(client_index, scaler, records)
+        self.Y_orig = self.Y.copy()
+
+    @property
+    def noise_Y(self):
+        return self._noise_Y_value
+
+    @noise_Y.setter
+    def noise_Y(self, value):
+        self._has_elm()
+        self._noise_Y_value = value
+        m, s = self.Y_orig.mean(), self.Y_orig.std()
+
+        # generate new Y value with random added noise
+        new_Y = []
+        for y in self.Y_orig:
+            if np.random.rand() < value:
+                new_Y.append(m + s*np.random.randn())  # fake value
+            else:
+                new_Y.append(y)
+
+        self.Y = np.array(new_Y)
