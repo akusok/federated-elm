@@ -121,10 +121,10 @@ def get_optimal_performance(client, batch_size=100):
 # %%
 test_data = []
 
-for noise in (-99, *np.linspace(-2, 1, num=3*2+1)):
+for noise in (*range(15), *range(15, 96, 5)):
     print(noise)
     for c, bsize, idx in zip([c1, c2, c3], [5, 50, 300], [1, 2, 3]):
-        c.noise_Y = 0 if noise==-99 else 10**noise  # logarithmic noise with no-noise special case
+        c.noise_Y = 0.01*noise  # noise in percent
         r2_c = get_optimal_performance(c, bsize)
         counts = np.arange(1, len(r2_c)+1) * bsize
         for n,r2 in zip(counts, r2_c):
@@ -133,6 +133,9 @@ for noise in (-99, *np.linspace(-2, 1, num=3*2+1)):
 test_df = pd.DataFrame(test_data)
 
 # %%
+test_df = pd.DataFrame(test_data)
+test_df = test_df[(test_df.noise % 5 == 0) & (test_df.noise < 51)]
+
 for idx in [1,2,3]:
     sns.lineplot(
         test_df[test_df.client == idx], 
@@ -142,13 +145,13 @@ for idx in [1,2,3]:
 
     # find worse performance
     sns.lineplot(
-        test_df[(test_df.client == idx) & (test_df.noise > -0.9)], 
+        test_df[(test_df.client == idx) & (test_df.noise >= 15)], 
         x="samples", y="r2", units="noise", 
         color="r", linewidth=1, estimator=None
     )
 
     sns.lineplot(
-        test_df[(test_df.client == idx) & (test_df.noise == -1.0)], 
+        test_df[(test_df.client == idx) & (test_df.noise == 10)], 
         x="samples", y="r2", units="noise", 
         color="black", linestyle='dashed', linewidth=1.5, estimator=None
     )
@@ -156,7 +159,7 @@ for idx in [1,2,3]:
 # no noise case
 for idx in [1,2,3]:
     sns.lineplot(
-        test_df[(test_df.client == idx) & (test_df.noise == -99)], 
+        test_df[(test_df.client == idx) & (test_df.noise == 0)], 
         x="samples", y="r2", linewidth=2.5
     )
     
@@ -165,50 +168,3 @@ plt.ylim([-0.15, 0.75])
 plt.xscale("log")
 plt.grid("major", axis="y")
 plt.show()
-
-# %%
-for idx in [1,2,3]:
-    sns.lineplot(
-        test_df[test_df.client == idx], 
-        x="samples", y="r2", units="noise", 
-        color=".7", linewidth=1, estimator=None
-    )
-
-    # find worse performance
-    sns.lineplot(
-        test_df[(test_df.client == idx) & (test_df.noise > -0.7)], 
-        x="samples", y="r2", units="noise", 
-        color="r", linewidth=1, estimator=None
-    )
-
-    sns.lineplot(
-        test_df[(test_df.client == idx) & (test_df.noise == -1.1052631578947372)], 
-        x="samples", y="r2", units="noise", 
-        color="black", linestyle='dashed', linewidth=1.5, estimator=None
-    )
-
-# no noise case
-for idx in [1,2,3]:
-    sns.lineplot(
-        test_df[(test_df.client == idx) & (test_df.noise == -99)], 
-        x="samples", y="r2", linewidth=2.5
-    )
-    
-plt.plot([0, 10000], [0, 0], '-k')
-# plt.ylim([-1, 1])
-plt.ylim([-0.15, 0.55])
-plt.xscale("log")
-plt.grid("major", axis="y")
-plt.show()
-
-# %% [markdown]
-# ## Look at HH values with "acceptable" noise of 10**-1
-
-# %%
-print("no noise")
-c1.noise_H = 0
-print(c1.HH[:3,:5])
-
-print("noise of 10**-1")
-c1.noise_H = 0.1
-print(c1.HH[:3,:5])
