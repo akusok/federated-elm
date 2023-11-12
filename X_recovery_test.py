@@ -211,7 +211,9 @@ sns.lineplot(
 )
     
 plt.xlim([-0.05, 1.5])
-plt.grid("major", axis="y")
+plt.grid("minor")
 plt.xlabel("difference vs original data, in STD")
 plt.ylabel("different values in reconstruction")
 plt.show()
+
+# %%
