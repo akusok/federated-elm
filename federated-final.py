@@ -121,7 +121,7 @@ r2_c3 = get_optimal_performance(c3, 300)
 
 
 # %% [markdown]
-# ## Extend single client with NOISY data
+# ## Extend single client with CLEAN data
 
 # %%
 def get_optimal_performance_extended(client, collab_client, batch_size=100):
@@ -183,6 +183,13 @@ def get_curves(noise_h=0.1, noise_y=0.1):
 results = [get_curves(0.1, 0.1) for _ in range(10)]
 r2_c1, r2_c2, r2_c3, r2_c1_c2, r2_c1_c3, r2_c2_c3 =  (np.mean([np.array(r[i]) for r in results], axis=0) for i in range(6))
 
+# %% [markdown]
+# ## Extend single client with NOISY data
+
+# %%
+results = [get_curves(0.1, 0.1) for _ in range(10)]
+r2_c1, r2_c2, r2_c3, r2_c1_c2, r2_c1_c3, r2_c2_c3 =  (np.mean([np.array(r[i]) for r in results], axis=0) for i in range(6))
+
 # %%
 plt.plot(np.arange(1, len(r2_c1)+1)*5, r2_c1)
 plt.plot(np.arange(0, len(r2_c1_c2))*50 + 100, r2_c1_c2, '--', c="orange")
@@ -194,6 +201,8 @@ plt.plot(np.arange(0, len(r2_c2_c3))*300 + 1000, r2_c2_c3, '--', c="red")
 plt.plot(np.arange(1, len(r2_c3)+1)*300, r2_c3, c="red")
 
 plt.plot([0, 10000], [0, 0], '-k')
-plt.ylim([-0.2, 0.8])
+plt.ylim([0, 0.75])
 plt.xscale("log")
 plt.show()
+
+# %%
