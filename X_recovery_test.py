@@ -216,4 +216,35 @@ plt.xlabel("difference vs original data, in STD")
 plt.ylabel("different values in reconstruction")
 plt.show()
 
+# %% [markdown]
+# ## Recovery of matrix HH
+
+# %%
+import scipy as sp
+
+# %%
+for batch in c1.batch_data(bsize=10):
+    break
+
+HH = batch[0]
+
+# %%
+H = c1.H[:1, :3]
+
+# %%
+print(H[:, :5])
+
+# %%
+HH = H.T@H
+
+# %%
+print(HH)
+
+# %%
+H1 = sp.linalg.sqrtm(HH)
+print(H1)
+
+# %%
+np.sqrt(np.diag(HH))
+
 # %%
