@@ -22,9 +22,16 @@ from matplotlib import pyplot as plt
 from sklearn.preprocessing import RobustScaler
 from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
 
 from client import ClientNoiseHH
-from utils import RECORDS_RANDOM, SCALER, get_optimal_performance
+from utils import (
+    RECORDS_RANDOM, 
+    RECORDS_GEOGRAPHICAL, 
+    SCALER, 
+    get_optimal_performance, 
+    get_optimal_performance_extended
+)
 
 # %%
 # %config InlineBackend.figure_format='retina'
@@ -38,15 +45,12 @@ L = 200
 W = np.random.randn(n, L)
 bias = np.random.randn(1, L)
 
-c1 = ClientNoiseHH(1, SCALER, RECORDS_RANDOM)
-c2 = ClientNoiseHH(2, SCALER, RECORDS_RANDOM)
-c3 = ClientNoiseHH(3, SCALER, RECORDS_RANDOM)
+def get_clients():
+    clients = [ClientNoiseHH(idx, SCALER, RECORDS_RANDOM) for idx in [1,2,3]]
+    [c.init_elm(L, W, bias) for c in clients]
+    return clients
 
-c1.init_elm(L, W, bias)
-c2.init_elm(L, W, bias)
-c3.init_elm(L, W, bias)
-
-clients = [c1, c2, c3]
+clients = get_clients()
 
 # %%
 # generate batch sizes unifromly for log scale
@@ -65,36 +69,36 @@ bsize = [bsize1, bsize2, bsize3]
 # %%
 test_data = []
 
-for noise in (-99, *np.logspace(-1, 1, num=5)):
-    print(noise, end="  ")
-    for idx, c in enumerate(clients):
-        # logarithmic noise with no-noise special case
-        c.noise_H = 0 if noise==-99 else noise  
-        
-        r2_c = get_optimal_performance(c, None, bsize[idx])
-        for n, r2 in zip(bsize[idx], r2_c):
-            test_data.append({"client": idx, "samples": n, "noise": noise, "r2": r2})
+for run in range(10):
+    print(run, end=":  ")
+    clients = get_clients()
+    
+    for noise in (-99, 0.2, *np.logspace(-1, 1, num=5)):
+        print(noise, end="  ")
+        for idx, c in enumerate(clients):
+            # logarithmic noise with no-noise special case
+            c.noise_H = 0 if noise==-99 else noise  
+            
+            r2_c = get_optimal_performance(c, None, bsize[idx])
+            for n, r2 in zip(bsize[idx], r2_c):
+                test_data.append({"run": run, "client": idx, "samples": n, "noise": noise, "r2": r2})
+    print()
 
 test_df = pd.DataFrame(test_data)
+test_df.to_csv("noise_HH.csv")
 
 # %%
-test_df
-
-# %%
-plt.rcParams['figure.figsize'] = [5, 3]
+plt.rcParams['figure.figsize'] = [4, 3]
 
 for idx in [0,1,2]:
     sns.lineplot(
-        test_df[(test_df.client == idx) & (test_df.noise > 0.1)], 
+        test_df[
+            (test_df.client == idx) 
+            & (test_df.noise > 0.2)
+            & (test_df.run == 1)
+        ], 
         x="samples", y="r2", units="noise", 
         color=".7", linewidth=1, estimator=None
-    )
-
-    sns.lineplot(
-        test_df[(test_df.client == idx) & (test_df.noise == 0.1)], 
-        x="samples", y="r2", units="noise", 
-        color="black", linestyle='dashed', linewidth=1.5, estimator=None, 
-        label="noise=0.1" if idx==0 else None
     )
 
 # no noise case
@@ -102,6 +106,13 @@ for idx, name in zip([0,1,2], ["client 1", "client 2", "client 3"]):
     sns.lineplot(
         test_df[(test_df.client == idx) & (test_df.noise == -99)], 
         x="samples", y="r2", linewidth=2.5, label=name
+    )
+    
+    sns.lineplot(
+        test_df[(test_df.client == idx) & (test_df.noise == 0.2)], 
+        x="samples", y="r2", errorbar=None,
+        color="black", linestyle=':', linewidth=1.5, 
+        label="noise=0.2" if idx==2 else None 
     )
 
 plt.legend()
@@ -111,17 +122,63 @@ plt.xlabel("training samples")
 plt.xscale("log")
 plt.grid("major", axis="y")
 
-plt.savefig("fig1.pdf", bbox_inches="tight")
+plt.savefig("noise_HH.pdf", bbox_inches="tight")
+plt.show()
+
+# %%
+plt.rcParams['figure.figsize'] = [4, 3]
+
+for idx in [0,1,2]:
+    sns.lineplot(
+        test_df[
+            (test_df.client == idx) 
+            & (test_df.noise > 0.1)
+            & (test_df.run == 1)
+        ], 
+        x="samples", y="r2", units="noise", 
+        color=".7", linewidth=1, estimator=None
+    )
+
+# no noise case
+for idx, name in zip([0,1,2], ["client 1", "client 2", "client 3"]):
+    sns.lineplot(
+        test_df[(test_df.client == idx) & (test_df.noise == -99)], 
+        x="samples", y="r2", linewidth=2.5, label=name
+    )
+    
+    sns.lineplot(
+        test_df[(test_df.client == idx) & (test_df.noise == 0.31622776601683794)], 
+        x="samples", y="r2", errorbar=None,
+        color="black", linestyle=':', linewidth=1.5, 
+        label="noise=0.33" if idx==2 else None 
+    )
+
+plt.legend()
+plt.plot([0, 10000], [0, 0], '-k')
+plt.ylim([-0.15, 0.75])
+plt.xlabel("training samples")
+plt.xscale("log")
+plt.grid("major", axis="y")
+
+plt.savefig("noise_HH_2.pdf", bbox_inches="tight")
 plt.show()
 
 # %% [markdown]
 # ## Look at HH values with "acceptable" noise of 10**-1
 
 # %%
-print("no noise")
-c1.noise_H = 0
-print(c1.HH[:3,:5])
+np.set_printoptions(precision=3)
 
-print("noise of 10**-1")
-c1.noise_H = 0.1
-print(c1.HH[:3,:5])
+# %%
+c1 = clients[0]
+
+# print("no noise")
+c1.noise_H = 0
+print(c1.H[:5,:5])
+
+print()
+# print("noise of 0.2")
+c1.noise_H = 0.2
+print(c1.H[:5,:5])
+
+# %%

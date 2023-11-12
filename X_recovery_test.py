@@ -97,7 +97,7 @@ c1.noise_H = 0
 print(c1.HH[:3,:5])
 
 print("noise of 10**-1")
-c1.noise_H = 0.1
+c1.noise_H = 0.2
 print(c1.HH[:3,:5])
 
 # %% [markdown]
