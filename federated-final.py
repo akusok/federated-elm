@@ -300,3 +300,41 @@ plt.plot([0, 10000], [0, 0], '-k')
 plt.ylim([0, 0.75])
 plt.xscale("log")
 plt.show()
+
+# %% [markdown]
+# ## Only Y hiding
+
+# %% jupyter={"outputs_hidden": true}
+results4 = [get_curves(c1, c2, c3, 0.0, 0.25) for c1,c2,c3 in clients]
+r2_c1, r2_c2, r2_c3, r2_c1_c2, r2_c1_c3, r2_c2_c3 =  (np.mean([np.array(r[i]) for r in results4], axis=0) for i in range(6))
+
+# %%
+res_noisy_2  = []
+
+for _ in range(10):
+    c3n = ClientNoiseBoth(3, scaler, records)
+    c3n.init_elm(L, W, bias)
+    c3n.noise_H = 0.0
+    c3n.noise_Y = 0.25
+    r2_c3_noisy = get_optimal_performance(c3n, 300)
+    res_noisy_2.append(r2_c3_noisy)
+
+r2_c3_noisy_2 = np.mean([np.array(r1) for r1 in res_noisy_2], axis=0)
+
+# %%
+plt.plot(np.arange(1, len(r2_c1)+1)*5, r2_c1)
+plt.plot(np.arange(0, len(r2_c1_c2))*50 + 100, r2_c1_c2, '--', c="orange")
+plt.plot(np.arange(0, len(r2_c1_c3))*200 + 100, r2_c1_c3, '--', c="red")
+
+plt.plot(np.arange(1, len(r2_c2)+1)*50, r2_c2, c="orange")
+plt.plot(np.arange(0, len(r2_c2_c3))*300 + 1000, r2_c2_c3, '--', c="red")
+
+plt.plot(np.arange(1, len(r2_c3)+1)*300, r2_c3, c="red")
+plt.plot(np.arange(1, len(r2_c3)+1)*300, r2_c3_noisy_2, ":", c="black")
+
+plt.plot([0, 10000], [0, 0], '-k')
+plt.ylim([0, 0.75])
+plt.xscale("log")
+plt.show()
+
+# %%
