@@ -28,7 +28,7 @@ from utils import (
 )
 
 # %%
-# %config InlineBackend.figure_format='retina'
+# %config InlineBackend.figure_format='retina' 
 
 # %% [markdown]
 # ## Get clients
