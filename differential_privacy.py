@@ -19,15 +19,9 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from sklearn.preprocessing import RobustScaler
-from sklearn.datasets import fetch_california_housing
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
-
 from client import ClientNoiseY
 from utils import (
     RECORDS_RANDOM, 
-    RECORDS_GEOGRAPHICAL, 
     SCALER, 
     get_optimal_performance, 
     get_optimal_performance_extended

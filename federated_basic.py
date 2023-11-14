@@ -19,13 +19,16 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from sklearn.preprocessing import RobustScaler
-from sklearn.datasets import fetch_california_housing
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 
 from client import Client
-from utils import RECORDS_RANDOM, RECORDS_GEOGRAPHICAL, SCALER, get_optimal_performance, get_optimal_performance_extended
+from utils import (
+    RECORDS_RANDOM, 
+    RECORDS_GEOGRAPHICAL, 
+    SCALER, 
+    get_optimal_performance, 
+    get_optimal_performance_extended
+)
 
 # %%
 # %config InlineBackend.figure_format='retina'
@@ -40,9 +43,13 @@ W = np.random.randn(n, L)
 bias = np.random.randn(1, L)
 
 def get_clients():
-    clients = [Client(idx, SCALER, RECORDS_RANDOM) for idx in [1,2,3]]
-    [c.init_elm(L, W, bias) for c in clients]
+    clients = []
+    for idx in (1,2,3):
+        client = Client(idx, SCALER, RECORDS_RANDOM)
+        client.init_elm(L, W, bias)
+        clients.append(client)
     return clients
+
 
 clients = get_clients()
 

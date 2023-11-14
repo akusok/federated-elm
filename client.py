@@ -91,8 +91,8 @@ class Client:
 
         # new mode with dynamic size batches
         batches_plus = [*batches, self.n]  # add upper boundary for last batch
-        for i in range(len(batches)):
-            j0 = batches[i]
+        for i, b in enumerate(batches):
+            j0 = b
             j1 = batches_plus[i+1]
             bH = H[j0:j1]
             bY = Y[j0:j1]
