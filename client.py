@@ -17,6 +17,8 @@ class Client:
         X = np.array(scaler.transform(X))
         Y = np.array(Y)
         self.X, self.X_test, self.Y, self.Y_test = train_test_split(X, Y, train_size=self.n)
+        self.X_test = self.X_test[:400]
+        self.Y_test = self.Y_test[:400]
 
         # future ELM params
         self.L, self.W, self.bias, self._B = None, None, None, None
@@ -69,17 +71,33 @@ class Client:
         Yh = np.tanh(XsW) @ self.B
         return r2_score(y_true=self.Y_test, y_pred=Yh)
 
-    def batch_data(self, bsize=100):
-        print(f"Return {len(range(0, self.n, bsize))} batches of size {bsize}", end=" ")
+    def batch_data(self, bsize=100, batches=None):
+        # if batches is None:
+        #     print(f"Return {len(range(0, self.n, bsize))} batches of size {bsize}", end=" ")
+        # else:
+        #     print(f"Return {len(batches)} specific batches", end=" ")
         H = self.H
         Y = self.Y
-        for i in range(0, self.n, bsize):
-            bH = H[i : i + bsize]
-            bY = Y[i : i + bsize]
-            # normalize matrices to 1-sample
-            # count = min(self.n - i, bsize)
-            count = 1
-            yield (bH.T @ bH / count, bH.T @ bY / count)
+
+        # old mode with fixed batches
+        if batches is None:
+            for i in range(0, self.n, bsize):
+                bH = H[i : i + bsize]
+                bY = Y[i : i + bsize]
+                # normalize matrices to 1-sample
+                # count = min(self.n - i, bsize)
+                count = 1
+                yield (bH.T @ bH / count, bH.T @ bY / count)
+
+        # new mode with dynamic size batches
+        batches_plus = [*batches, self.n]  # add upper boundary for last batch
+        for i, b in enumerate(batches):
+            j0 = b
+            j1 = batches_plus[i+1]
+            bH = H[j0:j1]
+            bY = Y[j0:j1]
+            yield (bH.T @ bH, bH.T @ bY)
+
 
     def raw_batch_data(self, bsize=100):
         """Test for limits of federated learning with arbitrary models"""
