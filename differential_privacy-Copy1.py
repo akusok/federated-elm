@@ -167,7 +167,7 @@ def noise_block(c1, c2, c3, run, noise):
 # %%
 test_data_fed = []
 
-for run in range(20):
+for run in range(3):
     print(run, end="  ")
     clients = get_clients()
     c1, c2, c3 = clients
@@ -178,61 +178,17 @@ for run in range(20):
         for n, r2 in zip(bsize[idx], r2_c):
             test_data_fed.append({"run": run, "client": idx, "samples": n, "noise": 0.0, "r2": r2})
 
-    for test_noise_level in (0, 0.10, 0.20, 0.35):
+    for test_noise_level in (0, 0.10, 0.15, 0.20):
         test_data_fed.extend(noise_block(c1, c2, c3, run, noise=test_noise_level))
 
 test_fed_df = pd.DataFrame(test_data_fed)
-test_fed_df.to_csv("data_diff_privacy_federated_4.csv")
+test_fed_df.to_csv("data_diff_privacy_federated_2.csv")
 
 # %% [markdown]
 # ## Print federated learning with noise levels
 
 # %%
-test_fed_df = pd.read_csv("data_diff_privacy_federated_4.csv")
-
-# %%
-# no noise case
-for idx, name in zip([0,1,2], ["client 1", "client 2", "client 3"]):
-    sns.lineplot(
-        test_fed_df[
-            (test_fed_df.client == str(idx))
-            & (test_fed_df.noise == 0.0)
-        ], 
-        x="samples", y="r2", linewidth=1, label=name
-    )
-
-sns.lineplot(
-    test_fed_df[
-        (test_fed_df.client == "c1_c2")
-        & (test_fed_df.noise == 0.0)
-    ], 
-    x="samples", y="r2", linestyle=":", linewidth=2, errorbar=None, label="client 1+2"
-)
-
-sns.lineplot(
-    test_fed_df[
-        (test_fed_df.client == "c1_c3")
-        & (test_fed_df.noise == 0.0)
-    ], 
-    x="samples", y="r2", linestyle=":", linewidth=2, errorbar=None, label="client 1+3"
-)
-
-sns.lineplot(
-    test_fed_df[
-        (test_fed_df.client == "c2_c3")
-        & (test_fed_df.noise == 0.0)
-    ], 
-    x="samples", y="r2", linestyle=":", linewidth=2, errorbar=None, label="client 2+3"
-)
-
-    
-plt.plot([0, 10000], [0, 0], '-k')
-plt.ylim([-0.15, 0.75])
-plt.xscale("log")
-plt.grid("major", axis="y")
-
-plt.savefig("noise_Y_fed.pdf", bbox_inches="tight")
-plt.show()
+test_fed_df = pd.read_csv("data_diff_privacy_federated_3.csv")
 
 # %%
 noise = 0.10
@@ -299,7 +255,7 @@ sns.lineplot(
         & (test_df.noise == 20)
     ], 
     x="samples", y="r2", linewidth=1, errorbar=None,  
-    linestyle="-", label="client 3 at\n20% noise"
+    linestyle="-", label="client 3 \n20% noise"
 )
 
 
@@ -334,62 +290,6 @@ plt.xscale("log")
 plt.grid("major", axis="y")
 
 plt.savefig("noise_Y_fed_20p.pdf", bbox_inches="tight")
-plt.show()
-
-# %%
-noise = 0.35
-
-# no noise case
-for idx, name in zip([0,1], ["client 1", "client 2"]):
-    sns.lineplot(
-        test_fed_df[
-            (test_fed_df.client == str(idx))
-            & (test_fed_df.noise == 0.0)
-        ], 
-        x="samples", y="r2", linewidth=1, label=name
-    )
-
-sns.lineplot(
-    test_df[
-        (test_df.client == 2)
-        & (test_df.noise == 35)
-    ], 
-    x="samples", y="r2", linewidth=1, errorbar=None,  
-    linestyle="-", label="client 3 at\n35% noise"
-)
-
-
-sns.lineplot(
-    test_fed_df[
-        (test_fed_df.client == "c1_c2")
-        & (test_fed_df.noise == noise)
-    ], 
-    x="samples", y="r2", linestyle=":", linewidth=2, errorbar=None, label="client 1+2"
-)
-
-sns.lineplot(
-    test_fed_df[
-        (test_fed_df.client == "c1_c3")
-        & (test_fed_df.noise == noise)
-    ], 
-    x="samples", y="r2", linestyle=":", linewidth=2, errorbar=None, label="client 1+3"
-)
-
-sns.lineplot(
-    test_fed_df[
-        (test_fed_df.client == "c2_c3")
-        & (test_fed_df.noise == noise)
-    ], 
-    x="samples", y="r2", linestyle=":", linewidth=2, errorbar=None, label="client 2+3"
-)
-
-    
-plt.plot([0, 10000], [0, 0], '-k')
-plt.ylim([-0.15, 0.75])
-plt.xscale("log")
-plt.grid("major", axis="y")
-
-plt.savefig("noise_Y_fed_35p.pdf", bbox_inches="tight")
 plt.show()
 
 # %%
