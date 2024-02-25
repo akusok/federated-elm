@@ -32,7 +32,7 @@ def set_initial_params(model: ELM):
     """
     n_classes = 10  # MNIST has 10 classes
     n_features = 784  # Number of features in dataset
-    n_hidden = 5000
+    n_hidden = 8000
 
     np.random.seed(42)
     model.n_features = n_features
