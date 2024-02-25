@@ -44,11 +44,13 @@ class ELM:
         self.n_features = n_features
         self.n_hidden = n_hidden
         self.n_classes = n_classes
+        
+        # define class variables
         self.W = None
         self.b = None
         self.HH = None
-        self._HH = None
         self.HY = None
+        self._HH = None
         self._HY = None
         self._n_samples = None
 
@@ -73,17 +75,22 @@ class ELM:
             y_new[np.arange(y.shape[0]), y] = 1
             y = y_new
 
-        # TODO: replace by incremental update
+        print("fit shapes", X.shape, y.shape)
+
+        # incremental update
         H = np.tanh(norm(X) @ self.W + self.b)
-        self._HH = H.T @ H
-        self._HY = H.T @ y
-        self._n_samples = X.shape[0]
+        self._HH += H.T @ H
+        self._HY += H.T @ y
+        self._n_samples += X.shape[0]
 
     def get_local_HH(self):
         return self._HH
     
     def get_local_HY(self):
         return self._HY
+
+    def get_n_training_samples(self):
+        return self._n_samples
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """Predict output probabilities that sum up to 1.

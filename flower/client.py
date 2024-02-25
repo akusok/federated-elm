@@ -11,6 +11,7 @@ from flwr_datasets import FederatedDataset
 
 if __name__ == "__main__":
     N_CLIENTS = 10
+    N_ROUNDS = 20
 
     parser = argparse.ArgumentParser(description="Flower")
     parser.add_argument(
@@ -31,6 +32,12 @@ if __name__ == "__main__":
     # Split the on edge data: 80% train, 20% test
     X_train, X_test = X[: int(0.8 * len(X))], X[int(0.8 * len(X)) :]
     y_train, y_test = y[: int(0.8 * len(y))], y[int(0.8 * len(y)) :]
+    
+    # subsample for faster test
+    X_test, y_test = X_test[::6], y_test[::6]
+
+    # part of data to share at consecutive rounds
+    samples_per_round = X_train.shape[0] // N_ROUNDS
 
     # Create LogisticRegression Model
     model = ELM()
@@ -45,12 +52,18 @@ if __name__ == "__main__":
 
         def fit(self, parameters, config):  # type: ignore
             utils.set_model_params(model, parameters)
-            # Ignore convergence failure due to low local epochs
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                model.fit(X_train, y_train)
-            print(f"Training finished for round {config['server_round']}")
-            return utils.get_model_parameters(model), len(X_train), {}
+
+            server_round = config["server_round"]
+            n_train_a = samples_per_round * (server_round + 1)
+            n_train_b = n_train_a + samples_per_round
+            if n_train_a < X_train.shape[0]:  # have more data to train on
+                model.fit(
+                    X_train[n_train_a:n_train_b],
+                    y_train[n_train_a:n_train_b]
+                )
+
+            print(f"Training finished for round {server_round}")
+            return utils.get_model_parameters(model), model.get_n_training_samples(), {}
 
         def evaluate(self, parameters, config):  # type: ignore
             utils.set_model_params(model, parameters)
@@ -60,5 +73,5 @@ if __name__ == "__main__":
 
     # Start Flower client
     fl.client.start_client(
-        server_address="0.0.0.0:8080", client=MnistClient().to_client()
+        server_address="0.0.0.0:8083", client=MnistClient().to_client()
     )

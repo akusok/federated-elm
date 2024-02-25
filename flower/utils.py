@@ -5,7 +5,8 @@ from flwr.common import NDArrays
 
 
 def get_model_parameters(model: ELM) -> NDArrays:
-    """Returns the parameters of a sklearn LogisticRegression model."""
+    """Returns the parameters of a sklearn LogisticRegression model.
+    """
     params = [
         model.get_local_HH(),
         model.get_local_HY(),
@@ -14,7 +15,9 @@ def get_model_parameters(model: ELM) -> NDArrays:
 
 
 def set_model_params(model: ELM, params: NDArrays) -> ELM:
-    """Sets the parameters of a sklean LogisticRegression model."""
+    """Sets the parameters of a sklean LogisticRegression model.
+    """
+    print("Setting model parameters...")
     model.HH = params[0]
     model.HY = params[1]
     return model
@@ -39,3 +42,4 @@ def set_initial_params(model: ELM):
     model.b = np.random.randn(1, n_hidden)
     model._HH = np.eye(n_hidden)
     model._HY = np.zeros((n_hidden, n_classes))
+    model._n_samples = 0
