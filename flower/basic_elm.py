@@ -48,6 +48,7 @@ class ELM:
         # define class variables
         self.W = None
         self.b = None
+        self.alpha = 1e-10  # L3 regularization
         self.HH = None
         self.HY = None
         self._HH = None
@@ -100,13 +101,17 @@ class ELM:
 
         print("predict proba shapes", X.shape, self.W.shape, self.b.shape, self.HH.shape, self.HY.shape)
 
-        beta = np.linalg.solve(self.HH, self.HY)
+        beta = np.linalg.solve(self.HH + self.alpha * np.eye(self.HH.shape[0]), self.HY)
 
-        H = np.tanh(norm(X) @ self.W + self.b)
-        yh = H @ beta
+        # batch predict to save RAM with large number of neurons
+        Xb = np.array_split(X, max(1, X.shape[0] // 2000))
+        yb = []
+        for x in Xb:
+            H = np.tanh(norm(x) @ self.W + self.b)
+            yb.append(H @ beta)
+        yh = np.concatenate(yb, axis=0)
 
         print("predict proba shapes", X.shape, yh.shape)
-
         return softmax(yh)
 
     def predict(self, X: np.ndarray) -> np.ndarray:

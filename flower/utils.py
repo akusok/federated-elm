@@ -32,12 +32,13 @@ def set_initial_params(model: ELM):
     """
     n_classes = 10  # MNIST has 10 classes
     n_features = 784  # Number of features in dataset
-    n_hidden = 100
+    n_hidden = 5000
 
     np.random.seed(42)
     model.n_features = n_features
     model.n_hidden = n_hidden
     model.n_classes = n_classes
+    model.alpha = 1e-6
     model.W = np.random.randn(n_features, n_hidden)
     model.b = np.random.randn(1, n_hidden)
     model._HH = np.eye(n_hidden)

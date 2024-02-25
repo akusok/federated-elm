@@ -34,7 +34,8 @@ if __name__ == "__main__":
     y_train, y_test = y[: int(0.8 * len(y))], y[int(0.8 * len(y)) :]
     
     # subsample for faster test
-    X_test, y_test = X_test[::6], y_test[::6]
+    subsample = 3
+    X_test, y_test = X_test[::subsample], y_test[::subsample]
 
     # part of data to share at consecutive rounds
     samples_per_round = X_train.shape[0] // N_ROUNDS
@@ -73,5 +74,5 @@ if __name__ == "__main__":
 
     # Start Flower client
     fl.client.start_client(
-        server_address="0.0.0.0:8083", client=MnistClient().to_client()
+        server_address="0.0.0.0:8085", client=MnistClient().to_client()
     )

@@ -21,7 +21,8 @@ def get_evaluate_fn(model: ELM):
     X_test, y_test = dataset["image"].reshape((len(dataset), -1)), dataset["label"]
 
     # subsample for faster test
-    X_test, y_test = X_test[::10], y_test[::10]
+    subsample = 6
+    X_test, y_test = X_test[::subsample], y_test[::subsample]
 
     # The `evaluate` function will be called after every round
     def evaluate(server_round, parameters: fl.common.NDArrays, config):
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     )
 
     fl.server.start_server(
-        server_address="0.0.0.0:8083",
+        server_address="0.0.0.0:8085",
         strategy=strategy,
         config=fl.server.ServerConfig(num_rounds=25),
     )
