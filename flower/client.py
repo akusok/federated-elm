@@ -1,5 +1,4 @@
 import argparse
-import warnings
 
 from basic_elm import ELM
 from sklearn.metrics import log_loss
